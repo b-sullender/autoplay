@@ -9,10 +9,23 @@ make
 sudo make install
 ```
 
-# Starting autoplay service
-```shell
-systemctl --user daemon-reload
-systemctl --user enable autoplay
-systemctl --user start autoplay
-systemctl --user status autoplay
-```
+# Enable and Start Autoplay Service
+1. Reload daemon
+   ```shell
+   sudo systemctl daemon-reload
+   ```
+2. Enable autoplay to start at login
+   - Enable for all users:
+     ```shell
+     sudo systemctl --global enable autoplay
+     ```
+   - Enable for only current user:
+     ```shell
+     systemctl --user enable autoplay
+     ```
+3. Start autoplay for current user
+   ```shell
+   systemctl --user start autoplay
+   ```
+   Alternatively, reboot the system.
+
