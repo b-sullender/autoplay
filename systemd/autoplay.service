@@ -1,0 +1,10 @@
+[Unit]
+Description=Autoplay Service
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/autoplay
+WorkingDirectory=/home/%u
+
+[Install]
+WantedBy=default.target
