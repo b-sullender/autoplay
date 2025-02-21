@@ -1,6 +1,8 @@
 #include <QApplication>
 #include <QPushButton>
+#include <QLabel>
 #include <QVBoxLayout>
+#include <QHBoxLayout>
 #include <QWidget>
 #include <QProcess>
 #include <QFileInfo>
@@ -43,84 +45,96 @@ int main(int argc, char *argv[]) {
     window.setWindowTitle("Autoplay");
 
     // Layout configuration
-    QVBoxLayout *layout = new QVBoxLayout;
-    layout->setContentsMargins(8, 8, 8, 8);
-    layout->setSpacing(8);
+    QVBoxLayout *mainLayout = new QVBoxLayout;
+    mainLayout->setContentsMargins(8, 8, 8, 8);
+    mainLayout->setSpacing(8);
 
-    // Button Style
-    QSize buttonSize(300, 48);
-    QSize iconSize(32, 32);
+    // Labels Layout (Device Left, Media Type Right)
+    QHBoxLayout *labelsLayout = new QHBoxLayout;
+    labelsLayout->setContentsMargins(8, 8, 8, 8);
+
+    QLabel *deviceLabel = new QLabel("<b>Device:</b> " + device);
+    QLabel *mediaTypeLabel = new QLabel("<b>Media Type:</b> " + mediaType);
+
+    deviceLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    mediaTypeLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+
+    labelsLayout->addWidget(deviceLabel, 1, Qt::AlignLeft);
+    labelsLayout->addWidget(mediaTypeLabel, 1, Qt::AlignRight);
+
+    mainLayout->addLayout(labelsLayout);
+
+    auto addButton = [&](const QString &text, const QString &iconPath, const QString &command, QStringList args = {}) {
+        if (isExecutableAvailable(command)) {
+            QPushButton *button = new QPushButton(text);
+            button->setIcon(QIcon(iconPath));
+            button->setIconSize(QSize(32, 32));
+            button->setMinimumWidth(315);
+            button->setMinimumHeight(48);
+            button->setStyleSheet("text-align: left; padding-left: 8px;");
+            button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+            mainLayout->addWidget(button);
+
+            QObject::connect(button, &QPushButton::clicked, [=]() {
+                QProcess::startDetached(command, args);
+                QApplication::quit();
+            });
+        }
+    };
+
+    int optionsDetected = 0;
 
     if (isExecutableAvailable("vlc")) {
-        QPushButton *playButton = new QPushButton("Play with VLC Media Player");
-        playButton->setIcon(QIcon("/usr/share/icons/hicolor/256x256/apps/vlc.png"));
-        playButton->setIconSize(iconSize);
-        playButton->setFixedSize(buttonSize);
-        playButton->setStyleSheet("text-align: left; padding-left: 8px;");
-        layout->addWidget(playButton);
-
-        QObject::connect(playButton, &QPushButton::clicked, [&]() {
-            if (mediaType == "bd") {
-                mediaType = "bluray";
-            }
-            QString vlcArg = mediaType + "://" + device;
-            QProcess::startDetached("vlc", {vlcArg});
-            QApplication::quit();
-        });
+        optionsDetected++;
+        QString vlcMediaType = mediaType;
+        if (vlcMediaType == "bd") {
+            vlcMediaType = "bluray";
+        }
+        addButton(
+            "Play with VLC Media Player",
+            "/usr/share/icons/hicolor/256x256/apps/vlc.png",
+            "vlc",
+            {vlcMediaType + "://" + device}
+        );
     }
 
-    if (isExecutableAvailable("brasero")) {
-        QPushButton *braseroButton = new QPushButton("Open Brasero");
-        braseroButton->setIcon(QIcon("/usr/share/icons/hicolor/256x256/apps/brasero.png"));
-        braseroButton->setIconSize(iconSize);
-        braseroButton->setFixedSize(buttonSize);
-        braseroButton->setStyleSheet("text-align: left; padding-left: 8px;");
-        layout->addWidget(braseroButton);
-        
-        QObject::connect(braseroButton, &QPushButton::clicked, [&]() {
-            QProcess::startDetached("brasero", QStringList());
-            QApplication::quit();
-        });
+    if ((mediaType == "cd") && (isExecutableAvailable("sound-juicer"))) {
+        optionsDetected++;
+        addButton(
+            "Open Sound Juicer",
+            "/usr/share/icons/hicolor/256x256/apps/org.gnome.SoundJuicer.png",
+            "sound-juicer"
+        );
     }
 
-    if (isExecutableAvailable("makemkv-backup")) {
-        QPushButton *backupButton = new QPushButton("Backup with MakeMKV");
-        backupButton->setIcon(QIcon("/usr/share/icons/hicolor/256x256/apps/makemkv.png"));
-        backupButton->setIconSize(iconSize);
-        backupButton->setFixedSize(buttonSize);
-        backupButton->setStyleSheet("text-align: left; padding-left: 8px;");
-        layout->addWidget(backupButton);
-
-        QObject::connect(backupButton, &QPushButton::clicked, [&]() {
-            QString folderPath = QFileDialog::getSaveFileName(
-                nullptr,
-                "Select or Create Destination Folder",
-                QDir::homePath() + "/NewFolderName",
-                QString(),
-                nullptr,
-                QFileDialog::DontConfirmOverwrite
-            );
-
-            if (!folderPath.isEmpty()) {
-                QDir dir(folderPath);
-                if (!dir.exists()) {
-                    dir.mkpath(".");
-                }
-                QString deviceArg = "--device=" + device;
-                QString pathArg = "--path=" + folderPath;
-                QProcess::startDetached("makemkv-backup", {deviceArg, pathArg});
-                QApplication::quit();
-            }
-        });
+    if ((mediaType == "cd" || mediaType == "dvd") &&
+        (isExecutableAvailable("brasero"))) {
+        optionsDetected++;
+        addButton(
+            "Open Brasero",
+            "/usr/share/icons/hicolor/256x256/apps/brasero.png",
+            "brasero"
+        );
     }
 
-    if (layout->count() == 0) {
-        QMessageBox::critical(nullptr, "Error", "Neither VLC, Brasero nor MakeMKV is installed.");
+    if ((mediaType == "dvd" || mediaType == "bd") &&
+        (isExecutableAvailable("makemkv"))) {
+        optionsDetected++;
+        addButton(
+            "Open MakeMKV",
+            "/usr/share/icons/hicolor/256x256/apps/makemkv.png",
+            "makemkv"
+        );
+    }
+
+    if (optionsDetected == 0) {
+        QMessageBox::critical(nullptr, "Autoplay Error", "No software options installed.");
         return 1;
     }
 
     // Set layout and display window
-    window.setLayout(layout);
+    window.setLayout(mainLayout);
     window.show();
 
     return app.exec();
