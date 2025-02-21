@@ -1,0 +1,16 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	mkdir build
+	cd build && cmake ..
+	cd build && $(MAKE)
+
+override_dh_auto_install:
+	cd build && $(MAKE) DESTDIR=$(CURDIR)/debian/autoplay/ install
+	
+	dpkg-shlibdeps -O \
+	-e debian/autoplay/usr/bin/autoplay \
+	-e debian/autoplay/usr/bin/autoplay-gui
