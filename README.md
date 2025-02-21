@@ -1,7 +1,7 @@
 # autoplay
 A program that detects CD/DVD/Blu-ray discs and runs a task window for Linux.
 
-<img src="screenshot.png" alt="Screenshot" width="400">
+<img src="screenshot.png" alt="Screenshot" width="350">
 
 For the best experience install all the recommended software:
 ```shell
