@@ -1,6 +1,13 @@
 # autoplay
 A program that detects CD/DVD/Blu-ray discs and runs a task window for Linux.
 
+![Screenshot](screenshot.png)
+
+For the best experience install all the recommended software:
+```shell
+sudo apt install -y sound-juicer brasero libbluray-bdj vlc
+```
+
 # Build and Install
 ```shell
 mkdir build && cd build
